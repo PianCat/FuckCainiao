@@ -48,6 +48,7 @@ class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     .apply {
                         getChildAt(1).visibility = View.GONE
                         getChildAt(2).visibility = View.GONE
+                        getChildAt(3).visibility = View.GONE
                     }
                 activity.window.apply {
                     navigationBarColor = Color.rgb(0x1a, 0x1a, 0x1a)
@@ -159,7 +160,7 @@ class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
                             this["jumpUrl"] = URL_ABOUT_FUCK_CAINIAO
                         }
                     }
-                    data.add(data.size - 2, aboutFuckCainiao)
+                    data.add(data.size - 1, aboutFuckCainiao)
                     Log.d("final aboutCainiao\n$aboutFuckCainiao")
                 }
             }
@@ -196,6 +197,25 @@ class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
             ?.hookBefore {
                 Log.d("LogisticDetailTANX_BannerView hook")
                 it.args[0] = null
+            }
+
+        loadClassOrNull("com.cainiao.wireless.homepage.v9.GuideAdsSection")
+            ?.findMethod { name == "getBizDataCount" }
+            ?.hookBefore {
+//                Log.d("GuideAdsSection getBizDataCount hook")
+                it.result = 0
+            }
+
+        loadClassOrNull("com.cainiao.wireless.homepage.v9.PackageListSection")
+            ?.findMethod { name == "bindPackageListData" }
+            ?.hookBefore {
+                val data = it.args[0] as MutableList<*>
+                data.forEach {
+                    Log.d("${it?.dump()}")
+                }
+                data.removeAll {
+                    it?.getObjectAs<String>("bizzType") == "PKG_ACTION_CARD"
+                }
             }
     }
 
