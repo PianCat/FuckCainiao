@@ -2,6 +2,7 @@ package io.github.duzhaokun123.fuckcainiao
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.AndroidAppHelper
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -20,6 +21,7 @@ import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import com.github.kyuubiran.ezxhelper.utils.hookReturnConstant
 import com.github.kyuubiran.ezxhelper.utils.invokeMethod
+import com.github.kyuubiran.ezxhelper.utils.invokeMethodAs
 import com.github.kyuubiran.ezxhelper.utils.invokeMethodAutoAs
 import com.github.kyuubiran.ezxhelper.utils.loadClass
 import com.github.kyuubiran.ezxhelper.utils.loadClassOrNull
@@ -27,6 +29,7 @@ import com.github.kyuubiran.ezxhelper.utils.paramCount
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.io.File
 
 class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
     companion object {
@@ -109,6 +112,21 @@ class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 for (i in (size - 1) downTo 1) {
                     dataArray.invokeMethodAutoAs<Any>("remove", i)
                 }
+
+                    val data0 = dataArray.invokeMethodAutoAs<Any>("get", 0)!!
+                    Log.d("HomeHeaderSection header data0: $data0")
+               val bizData = data0.invokeMethodAutoAs<Any>("get", "bizData")!!
+                val items =   bizData.invokeMethodAutoAs<Any>("get", "items")!!
+                        for (i in 0..<items.invokeMethodAutoAs<Int>("size")!!) {
+                            val itme = items.invokeMethodAutoAs<Any>("get", i)!!
+                            val key = itme.invokeMethodAutoAs<Any>("get", "key")!!
+                            if (key == "exchange_old_things") {
+                                Log.d("remove exchange_old_things item: $itme")
+                                items.invokeMethodAutoAs<Any>("remove", i)
+                                break
+                            }
+                        }
+
             }
 
         loadClassOrNull("com.cainiao.wireless.homepage.view.widget.PackageTimeLineDecorateView")
@@ -210,9 +228,9 @@ class XposedInit : IXposedHookLoadPackage, IXposedHookZygoteInit {
             ?.findMethod { name == "bindPackageListData" }
             ?.hookBefore {
                 val data = it.args[0] as MutableList<*>
-                data.forEach {
-                    Log.d("${it?.dump()}")
-                }
+//                data.forEach {
+//                    Log.d("${it?.dump()}")
+//                }
                 data.removeAll {
                     it?.getObjectAs<String>("bizzType") == "PKG_ACTION_CARD"
                 }
