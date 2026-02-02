@@ -10,8 +10,8 @@ android {
         applicationId = "io.github.duzhaokun123.fuckcainiao"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.2.0"
+        versionCode = 9
+        versionName = "0.2.1"
     }
 
     buildTypes {
