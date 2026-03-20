@@ -1,0 +1,73 @@
+name: sync-upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream-main
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Upstream
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Ensure sync token is configured
+        env:
+          PUSH_TOKEN: ${{ secrets.GHA_PAT }}
+        run: |
+          if [ -n "$PUSH_TOKEN" ]; then
+            exit 0
+          fi
+          echo "GHA_PAT is required to push the rebased branch and trigger downstream workflows." >&2
+          exit 1
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Rebase onto upstream/main
+        env:
+          PUSH_TOKEN: ${{ secrets.GHA_PAT }}
+        run: |
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream https://github.com/duzhaokun123/FuckCainiao.git
+          else
+            git remote add upstream https://github.com/duzhaokun123/FuckCainiao.git
+          fi
+          git fetch upstream main
+          before_sha=$(git rev-parse HEAD)
+          git rebase upstream/main
+          after_sha=$(git rev-parse HEAD)
+          echo "BEFORE_SHA=$before_sha" >> "$GITHUB_ENV"
+          echo "AFTER_SHA=$after_sha" >> "$GITHUB_ENV"
+          if [ "$before_sha" = "$after_sha" ]; then
+            echo "SYNC_CHANGED=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "SYNC_CHANGED=true" >> "$GITHUB_ENV"
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin HEAD:main --force-with-lease
+
+      - name: Sync Summary
+        if: always()
+        run: |
+          echo "### Sync Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "|Key|Value|" >> "$GITHUB_STEP_SUMMARY"
+          echo "|:--|:----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "|Changed|${SYNC_CHANGED:-unknown}|" >> "$GITHUB_STEP_SUMMARY"
+          echo "|Before|${BEFORE_SHA:-n/a}|" >> "$GITHUB_STEP_SUMMARY"
+          echo "|After|${AFTER_SHA:-n/a}|" >> "$GITHUB_STEP_SUMMARY"
